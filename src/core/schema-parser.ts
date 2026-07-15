@@ -1,0 +1,113 @@
+import * as fs from "fs";
+import * as path from "path";
+
+export interface ColumnDef {
+  name: string;
+  type: string;
+  length?: number;
+  primaryKey?: boolean;
+  unique?: boolean;
+  notNull?: boolean;
+  default?: any;
+  references?: { table: string; column: string };
+}
+
+export interface EntityDef {
+  name: string;
+  tableName: string;
+  columns: ColumnDef[];
+}
+
+export function parseSchemaFile(content: string): EntityDef[] {
+  const entities: EntityDef[] = [];
+
+  // Match Jade.Entity("table_name", { ... }) or Entity("table_name", { ... }) patterns
+  const entityRegex = /(?:Jade\.)?Entity\s*\(\s*["'](\w+)["']\s*,\s*\{([\s\S]*?)\}\s*\)/g;
+  let match;
+
+  while ((match = entityRegex.exec(content)) !== null) {
+    const tableName = match[1];
+    const columnsBlock = match[2];
+
+    const columns = parseColumns(columnsBlock);
+
+    // Infer entity name from table name
+    const name = tableName.charAt(0).toUpperCase() + tableName.slice(1);
+
+    entities.push({
+      name,
+      tableName,
+      columns,
+    });
+  }
+
+  return entities;
+}
+
+function parseColumns(block: string): ColumnDef[] {
+  const columns: ColumnDef[] = [];
+
+  // Split by lines and parse each line
+  const lines = block.split('\n');
+
+  for (const line of lines) {
+    // Match: name = Jade.Type(args):modifiers
+    const match = line.match(/(\w+)\s*=\s*(\w+(?:\.\w+)*)\s*\(([^)]*)\)(.*)/);
+    if (!match) continue;
+
+    const name = match[1];
+    const fullType = match[2];
+    const args = match[3];
+    const modifiers = match[4];
+
+    // Extract type name (e.g., "Jade.Integer" -> "Integer")
+    const typeName = fullType.split('.').pop() || fullType;
+
+    const column: ColumnDef = {
+      name,
+      type: mapType(typeName),
+    };
+
+    // Parse length from args
+    if (args && args.trim()) {
+      const length = parseInt(args.trim(), 10);
+      if (!isNaN(length)) {
+        column.length = length;
+      }
+    }
+
+    // Parse modifiers
+    if (modifiers) {
+      if (modifiers.includes("primaryKey")) column.primaryKey = true;
+      if (modifiers.includes("unique")) column.unique = true;
+      if (modifiers.includes("notNull")) column.notNull = true;
+
+      const defaultMatch = modifiers.match(/default\s*\(([^)]+)\)/);
+      if (defaultMatch) {
+        column.default = defaultMatch[1];
+      }
+    }
+
+    columns.push(column);
+  }
+
+  return columns;
+}
+
+function mapType(typeName: string): string {
+  const typeMap: Record<string, string> = {
+    "String": "VARCHAR",
+    "Text": "TEXT",
+    "Integer": "INTEGER",
+    "BigInt": "BIGINT",
+    "Float": "FLOAT",
+    "Decimal": "DECIMAL",
+    "Boolean": "BOOLEAN",
+    "Timestamp": "TIMESTAMP",
+    "Date": "DATE",
+    "UUID": "UUID",
+    "JSON": "JSON",
+  };
+
+  return typeMap[typeName] || "TEXT";
+}

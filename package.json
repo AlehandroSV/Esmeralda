@@ -1,10 +1,10 @@
 {
-  "name": "esmerald",
+  "name": "esmeralda",
   "version": "0.1.0",
   "description": "CLI for Jade ORM - a modern ORM for Lua",
   "main": "dist/index.js",
   "bin": {
-    "esmerald": "dist/bin/esmerald.js"
+    "esmeralda": "dist/bin/esmeralda.js"
   },
   "scripts": {
     "build": "tsc",

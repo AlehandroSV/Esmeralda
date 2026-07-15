@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 import { Command } from "commander";
 import { registerInit } from "../cli/init.js";
 import { registerGenerate } from "../cli/generate.js";

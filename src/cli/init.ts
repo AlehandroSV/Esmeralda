@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import * as path from "path";
 import { Logger } from "../utils/logger.js";
-import { ensureDir, writeFile } from "../core/file-manager.js";
+import { ensureDir, writeFile, fileExists } from "../core/file-manager.js";
 
 interface InitOptions {
   name?: string;
