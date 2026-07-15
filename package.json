@@ -1,0 +1,40 @@
+{
+  "name": "esmerald",
+  "version": "0.1.0",
+  "description": "CLI for Jade ORM - a modern ORM for Lua",
+  "main": "dist/index.js",
+  "bin": {
+    "esmerald": "dist/bin/esmerald.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint src/",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "orm",
+    "lua",
+    "jade",
+    "database",
+    "cli",
+    "migrations",
+    "postgresql"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
