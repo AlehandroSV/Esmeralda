@@ -61,6 +61,25 @@ esmeralda migrate
 esmeralda migrate --preview  # Preview only
 ```
 
+#### migrate status
+
+Shows the status of all migrations (applied vs pending).
+
+```bash
+esmeralda migrate status
+```
+
+Output:
+```
+Migration Status:
+
+  ✓ 20260715_create_users.lua
+  ✓ 20260716_create_posts.lua
+  ○ 20260717_add_email_index.lua (pending)
+
+Applied: 2, Pending: 1
+```
+
 #### migrate create
 
 Creates an empty migration.
@@ -87,6 +106,11 @@ esmeralda db pull                # All tables
 esmeralda db pull -t users       # Specific table
 ```
 
+The generated files include:
+- Column types and modifiers
+- Primary key detection
+- Foreign key relations (as comments)
+
 #### db push
 
 Pushes schema directly to database (without migrations).
@@ -94,6 +118,10 @@ Pushes schema directly to database (without migrations).
 ```bash
 esmeralda db push --force
 ```
+
+This will:
+- Create tables with `CREATE TABLE IF NOT EXISTS`
+- Add foreign key constraints
 
 #### seed
 
@@ -104,33 +132,36 @@ esmeralda seed                   # All seeds
 esmeralda seed user              # Specific seed
 ```
 
-### Project Structure
+### Error Handling
+
+All commands provide clear error messages with suggestions:
 
 ```
-esmerald/
-├── src/
-│   ├── index.ts              -- Entry point
-│   ├── cli/                  -- CLI commands
-│   │   ├── init.ts
-│   │   ├── generate.ts
-│   │   ├── migrate.ts
-│   │   ├── migrate-create.ts
-│   │   ├── migrate-rollback.ts
-│   │   ├── db-pull.ts
-│   │   ├── db-push.ts
-│   │   └── seed.ts
-│   ├── core/                 -- Core logic
-│   │   ├── schema-parser.ts
-│   │   ├── diff-engine.ts
-│   │   ├── migration-generator.ts
-│   │   └── lua-bridge.ts
-│   └── utils/                -- Utilities
-│       ├── logger.ts
-│       └── errors.ts
-├── src/bin/esmeralda.ts       -- npm bin entry point
-├── test/                     -- 9 tests
-├── package.json
-└── tsconfig.json
+[error] Not a Jade project. Run 'esmeralda init' first.
+[info] Suggestion: Run 'esmeralda init' in your project directory
+```
+
+```
+[error] Failed to apply migration: 20260716_create_users.lua
+[info] Check the migration file for syntax errors. Original error: attempt to call nil value
+```
+
+Enable debug mode for stack traces:
+```bash
+DEBUG=true esmeralda migrate
+```
+
+### Docker Support
+
+Esmeralda automatically detects `docker-compose.yml` and runs commands inside the container:
+
+```bash
+# With docker-compose.yml in project root
+esmeralda migrate        # Runs inside container
+esmeralda seed           # Runs inside container
+
+# Without docker-compose.yml
+esmeralda migrate        # Runs locally (requires Lua/LuaJIT)
 ```
 
 ### Development
@@ -148,14 +179,6 @@ npm run build
 # Development
 npm run dev
 ```
-
-### Roadmap
-
-- [x] npm publication
-- [ ] Standalone build (.exe via pkg)
-- [ ] `esmeralda db diff` command
-- [ ] `esmeralda db seed` command
-- [ ] MySQL/SQLite support
 
 ### License
 
@@ -215,6 +238,25 @@ esmeralda migrate
 esmeralda migrate --preview  # Apenas mostra o que seria executado
 ```
 
+#### migrate status
+
+Mostra o status de todas as migrations (aplicadas vs pendentes).
+
+```bash
+esmeralda migrate status
+```
+
+Saída:
+```
+Migration Status:
+
+  ✓ 20260715_create_users.lua
+  ✓ 20260716_create_posts.lua
+  ○ 20260717_add_email_index.lua (pending)
+
+Applied: 2, Pending: 1
+```
+
 #### migrate create
 
 Cria uma migration vazia.
@@ -241,6 +283,11 @@ esmeralda db pull                # Todas as tabelas
 esmeralda db pull -t users       # Tabela específica
 ```
 
+Os arquivos gerados incluem:
+- Tipos de coluna e modificadores
+- Detecção de primary key
+- Relações de foreign key (como comentários)
+
 #### db push
 
 Empurra o schema diretamente para o banco (sem migrations).
@@ -249,42 +296,49 @@ Empurra o schema diretamente para o banco (sem migrations).
 esmeralda db push --force
 ```
 
+Isso irá:
+- Criar tabelas com `CREATE TABLE IF NOT EXISTS`
+- Adicionar constraints de foreign key
+
 #### seed
 
-Rodar arquivos de seed.
+Roda arquivos de seed.
 
 ```bash
 esmeralda seed                   # Todos os seeds
 esmeralda seed user              # Seed específico
 ```
 
-### Estrutura do Projeto
+### Tratamento de Erros
+
+Todos os comandos fornecem mensagens de erro claras com sugestões:
 
 ```
-esmerald/
-├── src/
-│   ├── index.ts              -- Entry point
-│   ├── cli/                  -- Comandos da CLI
-│   │   ├── init.ts
-│   │   ├── generate.ts
-│   │   ├── migrate.ts
-│   │   ├── migrate-create.ts
-│   │   ├── migrate-rollback.ts
-│   │   ├── db-pull.ts
-│   │   ├── db-push.ts
-│   │   └── seed.ts
-│   ├── core/                 -- Lógica principal
-│   │   ├── schema-parser.ts
-│   │   ├── diff-engine.ts
-│   │   ├── migration-generator.ts
-│   │   └── lua-bridge.ts
-│   └── utils/                -- Utilitários
-│       ├── logger.ts
-│       └── errors.ts
-├── src/bin/esmeralda.ts       -- Entry point para npm
-├── test/                     -- 9 testes
-├── package.json
-└── tsconfig.json
+[error] Not a Jade project. Run 'esmeralda init' first.
+[info] Suggestion: Run 'esmeralda init' in your project directory
+```
+
+```
+[error] Failed to apply migration: 20260716_create_users.lua
+[info] Check the migration file for syntax errors. Original error: attempt to call nil value
+```
+
+Ative o modo debug para stack traces:
+```bash
+DEBUG=true esmeralda migrate
+```
+
+### Suporte a Docker
+
+O Esmeralda detecta automaticamente o `docker-compose.yml` e roda os comandos dentro do container:
+
+```bash
+# Com docker-compose.yml na raiz do projeto
+esmeralda migrate        # Roda dentro do container
+esmeralda seed           # Roda dentro do container
+
+# Sem docker-compose.yml
+esmeralda migrate        # Roda localmente (requer Lua/LuaJIT)
 ```
 
 ### Desenvolvimento
@@ -302,14 +356,6 @@ npm run build
 # Desenvolvimento
 npm run dev
 ```
-
-### Roadmap
-
-- [x] Publicação no npm
-- [ ] Build standalone (.exe via pkg)
-- [ ] Comando `esmeralda db diff`
-- [ ] Comando `esmeralda db seed`
-- [ ] Suporte a MySQL/SQLite
 
 ### Licença
 
