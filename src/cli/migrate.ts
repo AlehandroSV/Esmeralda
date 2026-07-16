@@ -12,6 +12,39 @@ interface MigrateOptions {
   preview?: boolean;
 }
 
+function hasDockerCompose(projectRoot: string): boolean {
+  return fs.existsSync(path.join(projectRoot, "docker-compose.yml")) ||
+         fs.existsSync(path.join(projectRoot, "docker-compose.yaml"));
+}
+
+async function runInDocker(script: string, projectRoot: string): Promise<void> {
+  // Find the api service name from docker-compose.yml
+  const composeFile = fs.existsSync(path.join(projectRoot, "docker-compose.yml"))
+    ? "docker-compose.yml" : "docker-compose.yaml";
+  const composeContent = fs.readFileSync(path.join(projectRoot, composeFile), "utf-8");
+
+  // Extract first service name (usually "api")
+  const serviceMatch = composeContent.match(/^\s{2}(\w+):/m);
+  const serviceName = serviceMatch ? serviceMatch[1] : "api";
+
+  // Escape the script for shell
+  const escapedScript = script.replace(/"/g, '\\"').replace(/\n/g, " ");
+
+  await exec("docker", [
+    "compose", "exec", "-T", serviceName,
+    "luajit", "-e", script
+  ], { cwd: projectRoot });
+}
+
+async function runLocal(script: string): Promise<void> {
+  // Try luajit first, then lua
+  try {
+    await exec("luajit", ["-e", script]);
+  } catch {
+    await exec("lua", ["-e", script]);
+  }
+}
+
 export function registerMigrate(program: Command): Command {
   const migrate = program
     .command("migrate")
@@ -40,10 +73,15 @@ export function registerMigrate(program: Command): Command {
         return;
       }
 
+      const useDocker = hasDockerCompose(projectRoot);
+      if (useDocker) {
+        Logger.info("Using Docker to run migrations");
+      }
+
       Logger.info(`Found ${files.length} migration(s)`);
       Logger.info("Running migrations...");
 
-      // Execute each migration via Lua
+      // Execute each migration
       for (const file of files) {
         Logger.info(`  Applying: ${file}`);
 
@@ -53,16 +91,38 @@ export function registerMigrate(program: Command): Command {
         }
 
         try {
+          let configPath: string;
+          let migrationPath: string;
+
+          if (useDocker) {
+            // Convert Windows paths to Docker container paths (/app/...)
+            const relativeConfig = path.relative(projectRoot, path.join(projectRoot, "jade.config.lua")).replace(/\\/g, "/");
+            const relativeMigration = path.relative(projectRoot, path.join(migrationsDir, file)).replace(/\\/g, "/");
+            configPath = "/app/" + relativeConfig;
+            migrationPath = "/app/" + relativeMigration;
+          } else {
+            configPath = path.join(projectRoot, "jade.config.lua").replace(/\\/g, "\\\\");
+            migrationPath = path.join(migrationsDir, file).replace(/\\/g, "\\\\");
+          }
+
           const script = `
-            local jade = require("jade")
-            local config = dofile("${path.join(projectRoot, "jade.config.lua").replace(/\\/g, "\\\\")}")
-            jade.configure(config)
-            jade.migration.init(jade.driver())
-            local migration = dofile("${path.join(migrationsDir, file).replace(/\\/g, "\\\\")}")
-            migration.up()
+local jade = require("jade")
+local config = dofile("${configPath}")
+jade.configure(config)
+jade.migration.init(jade.driver())
+local migration = dofile("${migrationPath}")
+migration.up()
+local tracker = require("jade.migration.tracker")
+tracker.recordMigration(jade.driver(), "${file}")
+print("  OK: ${file}")
           `;
 
-          await exec("lua", ["-e", script]);
+          if (useDocker) {
+            await runInDocker(script, projectRoot);
+          } else {
+            await runLocal(script);
+          }
+
           Logger.success(`  Applied: ${file}`);
         } catch (error: any) {
           Logger.error(`  Failed: ${file}`);
