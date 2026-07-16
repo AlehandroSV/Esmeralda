@@ -8,6 +8,13 @@ import { promisify } from "util";
 
 const exec = promisify(execFile);
 
+interface ForeignKey {
+  constraint_name: string;
+  column_name: string;
+  foreign_table_name: string;
+  foreign_column_name: string;
+}
+
 export function registerDbPull(db: Command): void {
   db
     .command("pull")
@@ -63,9 +70,40 @@ export function registerDbPull(db: Command): void {
           const { stdout: colOutput } = await exec("lua", ["-e", columnScript]);
           const columns = JSON.parse(colOutput.trim());
 
+          // Get foreign keys for this table
+          const fkScript = `
+            local jade = require("jade")
+            local config = dofile("${path.join(projectRoot, "jade.config.lua").replace(/\\/g, "\\\\")}")
+            jade.configure(config)
+            local fks = jade.driver():execute([[
+              SELECT
+                tc.constraint_name,
+                kcu.column_name,
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name
+              FROM information_schema.table_constraints AS tc
+              JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
+              JOIN information_schema.constraint_column_usage AS ccu
+                ON ccu.constraint_name = tc.constraint_name
+              WHERE tc.constraint_type = 'FOREIGN KEY'
+              AND tc.table_name = '${tableName}'
+              AND tc.table_schema = 'public'
+            ]])
+            print(require("dkjson").encode(fks))
+          `;
+
+          let foreignKeys: ForeignKey[] = [];
+          try {
+            const { stdout: fkOutput } = await exec("lua", ["-e", fkScript]);
+            foreignKeys = JSON.parse(fkOutput.trim());
+          } catch {
+            // Foreign keys query might fail, continue without them
+          }
+
           // Generate Lua entity file
-          const entityName = tableName.charAt(0).toUpperCase() + tableName.slice(1, -1);
-          const luaContent = generateEntityLua(entityName, tableName, columns);
+          const entityName = tableName.charAt(0).toUpperCase() + tableName.slice(1);
+          const luaContent = generateEntityLua(entityName, tableName, columns, foreignKeys);
 
           const filename = `${tableName}.lua`;
           const filePath = path.join(schemaDir, filename);
@@ -81,7 +119,7 @@ export function registerDbPull(db: Command): void {
     });
 }
 
-function generateEntityLua(entityName: string, tableName: string, columns: any[]): string {
+function generateEntityLua(entityName: string, tableName: string, columns: any[], foreignKeys: ForeignKey[]): string {
   const lines: string[] = [];
 
   lines.push(`local Jade = require("jade")`);
@@ -132,6 +170,18 @@ function generateEntityLua(entityName: string, tableName: string, columns: any[]
   }
 
   lines.push(`})`);
+
+  // Add relations based on foreign keys
+  if (foreignKeys.length > 0) {
+    lines.push(``);
+    lines.push(`-- Relations`);
+
+    for (const fk of foreignKeys) {
+      // Infer entity name from foreign table
+      const foreignEntity = fk.foreign_table_name.charAt(0).toUpperCase() + fk.foreign_table_name.slice(1, -1);
+      lines.push(`-- ${entityName}:belongsTo(${foreignEntity}, { foreign_key = "${fk.column_name}" })`);
+    }
+  }
 
   return lines.join("\n");
 }

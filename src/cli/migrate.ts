@@ -134,5 +134,87 @@ print("  OK: ${file}")
       Logger.success("All migrations applied!");
     });
 
+  // Status command
+  migrate
+    .command("status")
+    .description("Show migration status")
+    .action(async () => {
+      const projectRoot = findProjectRoot();
+      if (!projectRoot) {
+        Logger.error("Not a Jade project. Run 'esmeralda init' first.");
+        process.exit(1);
+      }
+
+      const migrationsDir = path.join(projectRoot, "migrations");
+      if (!fs.existsSync(migrationsDir)) {
+        Logger.error("Migrations directory not found.");
+        process.exit(1);
+      }
+
+      // List migration files
+      const files = fs.readdirSync(migrationsDir)
+        .filter(f => f.endsWith(".lua") && !f.startsWith("_"))
+        .sort();
+
+      const useDocker = hasDockerCompose(projectRoot);
+
+      try {
+        // Get applied migrations from tracker
+        let configPath: string;
+        if (useDocker) {
+          const relativeConfig = path.relative(projectRoot, path.join(projectRoot, "jade.config.lua")).replace(/\\/g, "/");
+          configPath = "/app/" + relativeConfig;
+        } else {
+          configPath = path.join(projectRoot, "jade.config.lua").replace(/\\/g, "\\\\");
+        }
+
+        const script = `
+local jade = require("jade")
+local config = dofile("${configPath}")
+jade.configure(config)
+jade.migration.init(jade.driver())
+local tracker = require("jade.migration.tracker")
+local applied = tracker.getAppliedMigrations(jade.driver())
+local result = {}
+for name, _ in pairs(applied) do
+    table.insert(result, name)
+end
+table.sort(result)
+print(require("dkjson").encode(result))
+        `;
+
+        let applied: string[] = [];
+        if (useDocker) {
+          const { stdout } = await runInDocker(script, projectRoot);
+          applied = JSON.parse(stdout.trim());
+        } else {
+          const { stdout } = await exec("lua", ["-e", script]);
+          applied = JSON.parse(stdout.trim());
+        }
+
+        // Show status
+        Logger.info("Migration Status:");
+        Logger.info("");
+
+        const appliedSet = new Set(applied);
+
+        for (const file of files) {
+          if (appliedSet.has(file)) {
+            Logger.success(`  ✓ ${file}`);
+          } else {
+            Logger.warn(`  ○ ${file} (pending)`);
+          }
+        }
+
+        const pending = files.filter(f => !appliedSet.has(f));
+        Logger.info("");
+        Logger.info(`Applied: ${applied.length}, Pending: ${pending.length}`);
+      } catch (error: any) {
+        Logger.error("Failed to get migration status:");
+        Logger.error(error.message);
+        process.exit(1);
+      }
+    });
+
   return migrate;
 }

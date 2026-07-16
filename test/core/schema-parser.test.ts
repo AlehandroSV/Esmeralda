@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSchemaFile } from "../../src/core/schema-parser.js";
+import { parseSchemaFile, validateSchema } from "../../src/core/schema-parser.js";
 
 describe("Schema Parser", () => {
   it("parses Entity definitions", () => {
@@ -51,5 +51,86 @@ describe("Schema Parser", () => {
     expect(entities).toHaveLength(2);
     expect(entities[0].tableName).toBe("users");
     expect(entities[1].tableName).toBe("posts");
+  });
+
+  it("parses references", () => {
+    const content = `
+      local Post = Jade.Entity("posts", {
+          id = Jade.Integer():primaryKey(),
+          user_id = Jade.Integer():references("users", "id"),
+      })
+    `;
+
+    const entities = parseSchemaFile(content);
+    const columns = entities[0].columns;
+
+    expect(columns[1].name).toBe("user_id");
+    expect(columns[1].references).toEqual({ table: "users", column: "id" });
+  });
+});
+
+describe("Schema Validation", () => {
+  it("validates valid schema", () => {
+    const entities = [
+      {
+        name: "User",
+        tableName: "users",
+        columns: [
+          { name: "id", type: "INTEGER", primaryKey: true },
+          { name: "name", type: "VARCHAR" },
+        ],
+      },
+    ];
+
+    const errors = validateSchema(entities);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("detects duplicate table names", () => {
+    const entities = [
+      { name: "User", tableName: "users", columns: [{ name: "id", type: "INTEGER", primaryKey: true }] },
+      { name: "User2", tableName: "users", columns: [{ name: "id", type: "INTEGER", primaryKey: true }] },
+    ];
+
+    const errors = validateSchema(entities);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("Duplicate table name");
+  });
+
+  it("detects missing primary key", () => {
+    const entities = [
+      { name: "User", tableName: "users", columns: [{ name: "name", type: "VARCHAR" }] },
+    ];
+
+    const errors = validateSchema(entities);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("No primary key");
+  });
+
+  it("detects invalid table name format", () => {
+    const entities = [
+      { name: "User", tableName: "Users", columns: [{ name: "id", type: "INTEGER", primaryKey: true }] },
+    ];
+
+    const errors = validateSchema(entities);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("Invalid table name format");
+  });
+
+  it("detects duplicate column names", () => {
+    const entities = [
+      {
+        name: "User",
+        tableName: "users",
+        columns: [
+          { name: "id", type: "INTEGER", primaryKey: true },
+          { name: "id", type: "INTEGER" },
+        ],
+      },
+    ];
+
+    const errors = validateSchema(entities);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("Duplicate column name");
   });
 });

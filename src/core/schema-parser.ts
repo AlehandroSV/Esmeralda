@@ -18,6 +18,12 @@ export interface EntityDef {
   columns: ColumnDef[];
 }
 
+export interface ValidationError {
+  entity: string;
+  column?: string;
+  message: string;
+}
+
 export function parseSchemaFile(content: string): EntityDef[] {
   const entities: EntityDef[] = [];
 
@@ -86,6 +92,15 @@ function parseColumns(block: string): ColumnDef[] {
       if (defaultMatch) {
         column.default = defaultMatch[1];
       }
+
+      // Parse references
+      const refsMatch = modifiers.match(/references\s*\(\s*["']?(\w+)["']?\s*(?:,\s*["']?(\w+)["']?)?\s*\)/);
+      if (refsMatch) {
+        column.references = {
+          table: refsMatch[1],
+          column: refsMatch[2] || "id",
+        };
+      }
     }
 
     columns.push(column);
@@ -110,4 +125,64 @@ function mapType(typeName: string): string {
   };
 
   return typeMap[typeName] || "TEXT";
+}
+
+export function validateSchema(entities: EntityDef[]): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const tableNames = new Set<string>();
+  const columnNames = new Map<string, Set<string>>();
+
+  for (const entity of entities) {
+    // Check for duplicate table names
+    if (tableNames.has(entity.tableName)) {
+      errors.push({
+        entity: entity.name,
+        message: `Duplicate table name: ${entity.tableName}`,
+      });
+    }
+    tableNames.add(entity.tableName);
+
+    // Check for duplicate column names
+    const cols = new Set<string>();
+    for (const col of entity.columns) {
+      if (cols.has(col.name)) {
+        errors.push({
+          entity: entity.name,
+          column: col.name,
+          message: `Duplicate column name: ${col.name}`,
+        });
+      }
+      cols.add(col.name);
+    }
+
+    // Check for primary key
+    const hasPrimaryKey = entity.columns.some(c => c.primaryKey);
+    if (!hasPrimaryKey) {
+      errors.push({
+        entity: entity.name,
+        message: "No primary key defined",
+      });
+    }
+
+    // Check for table name format
+    if (!/^[a-z_][a-z0-9_]*$/.test(entity.tableName)) {
+      errors.push({
+        entity: entity.name,
+        message: `Invalid table name format: ${entity.tableName}`,
+      });
+    }
+
+    // Check column names
+    for (const col of entity.columns) {
+      if (!/^[a-z_][a-z0-9_]*$/.test(col.name)) {
+        errors.push({
+          entity: entity.name,
+          column: col.name,
+          message: `Invalid column name format: ${col.name}`,
+        });
+      }
+    }
+  }
+
+  return errors;
 }

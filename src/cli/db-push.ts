@@ -84,6 +84,7 @@ export function registerDbPush(db: Command): void {
 function generateSchemaSQL(entities: any[]): string[] {
   const statements: string[] = [];
 
+  // First pass: create tables
   for (const entity of entities) {
     const columns = entity.columns || [];
     const colDefs: string[] = [];
@@ -98,13 +99,32 @@ function generateSchemaSQL(entities: any[]): string[] {
       if (col.primaryKey) def += " PRIMARY KEY";
       if (col.notNull) def += " NOT NULL";
       if (col.unique) def += " UNIQUE";
-      if (col.default !== undefined) def += ` DEFAULT ${col.default}`;
+      if (col.default !== undefined) {
+        if (typeof col.default === "string") {
+          def += ` DEFAULT '${col.default}'`;
+        } else {
+          def += ` DEFAULT ${col.default}`;
+        }
+      }
 
       colDefs.push(def);
     }
 
     const sql = `CREATE TABLE IF NOT EXISTS "${entity.tableName}" (\n  ${colDefs.join(",\n  ")}\n)`;
     statements.push(sql);
+  }
+
+  // Second pass: add foreign keys
+  for (const entity of entities) {
+    const columns = entity.columns || [];
+
+    for (const col of columns) {
+      if (col.references) {
+        const fkName = `fk_${entity.tableName}_${col.name}`;
+        const sql = `ALTER TABLE "${entity.tableName}" ADD CONSTRAINT "${fkName}" FOREIGN KEY ("${col.name}") REFERENCES "${col.references.table}"("${col.references.column}")`;
+        statements.push(sql);
+      }
+    }
   }
 
   return statements;
