@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 import { Command } from "commander";
 import { registerInit } from "../cli/init.js";
 import { registerGenerate } from "../cli/generate.js";
@@ -26,3 +26,4 @@ registerDbPush(program);
 registerSeed(program);
 
 program.parse();
+
