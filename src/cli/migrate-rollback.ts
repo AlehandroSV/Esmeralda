@@ -12,9 +12,9 @@ interface RollbackOptions {
   steps?: string;
 }
 
-export function registerMigrateRollback(program: Command): void {
-  program
-    .command("migrate rollback")
+export function registerMigrateRollback(migrate: Command): void {
+  migrate
+    .command("rollback")
     .description("Rollback last migration(s)")
     .option("-s, --steps <number>", "Number of migrations to rollback", "1")
     .action(async (options: RollbackOptions) => {

@@ -8,9 +8,9 @@ import { promisify } from "util";
 
 const exec = promisify(execFile);
 
-export function registerDbPull(program: Command): void {
-  program
-    .command("db pull")
+export function registerDbPull(db: Command): void {
+  db
+    .command("pull")
     .description("Introspect database and generate entity files")
     .option("-t, --table <name>", "Introspect specific table only")
     .action(async (options: { table?: string }) => {

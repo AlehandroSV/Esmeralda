@@ -12,8 +12,8 @@ interface MigrateOptions {
   preview?: boolean;
 }
 
-export function registerMigrate(program: Command): void {
-  program
+export function registerMigrate(program: Command): Command {
+  const migrate = program
     .command("migrate")
     .description("Run pending migrations")
     .option("--preview", "Show SQL without executing")
@@ -73,4 +73,6 @@ export function registerMigrate(program: Command): void {
 
       Logger.success("All migrations applied!");
     });
+
+  return migrate;
 }

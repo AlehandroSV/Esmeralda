@@ -13,9 +13,9 @@ interface DbPushOptions {
   force?: boolean;
 }
 
-export function registerDbPush(program: Command): void {
-  program
-    .command("db push")
+export function registerDbPush(db: Command): void {
+  db
+    .command("push")
     .description("Push schema directly to database (skip migrations)")
     .option("--force", "Skip confirmation")
     .action(async (options: DbPushOptions) => {

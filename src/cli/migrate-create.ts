@@ -9,9 +9,9 @@ interface MigrateCreateOptions {
   name?: string;
 }
 
-export function registerMigrateCreate(program: Command): void {
-  program
-    .command("migrate create")
+export function registerMigrateCreate(migrate: Command): void {
+  migrate
+    .command("create")
     .description("Create a new empty migration file")
     .argument("[name]", "Migration name")
     .action(async (name?: string) => {
