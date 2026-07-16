@@ -32,10 +32,10 @@
   "author": "AlehandroSV",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AlehandroSV/Esmeralda.git",
+    "url": "https://github.com/AlehandroSV/esmeralda.git",
     "directory": "esmerald"
   },
-  "homepage": "https://github.com/AlehandroSV/Jade",
+  "homepage": "https://github.com/AlehandroSV/jade",
   "bugs": {
     "url": "https://github.com/AlehandroSV/Esmeralda/issues"
   },
