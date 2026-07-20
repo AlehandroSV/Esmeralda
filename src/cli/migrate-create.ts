@@ -7,6 +7,7 @@ import { writeFile, ensureDir } from "../core/file-manager.js";
 
 interface MigrateCreateOptions {
   name?: string;
+  database?: string;
 }
 
 export function registerMigrateCreate(migrate: Command): void {
@@ -14,7 +15,8 @@ export function registerMigrateCreate(migrate: Command): void {
     .command("create")
     .description("Create a new empty migration file")
     .argument("[name]", "Migration name")
-    .action(async (name?: string) => {
+    .option("-d, --database <name>", "Database to create migration for")
+    .action(async (name?: string, options?: MigrateCreateOptions) => {
       try {
         if (!name) {
           throw AppError.migrationNameRequired();
@@ -25,7 +27,19 @@ export function registerMigrateCreate(migrate: Command): void {
           throw AppError.notInitialized();
         }
 
-        const migrationsDir = path.join(projectRoot, "migrations");
+        // Get migrations directory based on database option
+        let migrationsDir: string;
+        if (options?.database) {
+          const { getDatabaseConfig } = await import("../core/multi-db.js");
+          const dbConfig = getDatabaseConfig(projectRoot, options.database);
+          if (!dbConfig) {
+            throw new Error(`Database "${options.database}" not found in config.`);
+          }
+          migrationsDir = dbConfig.migrationsDir;
+        } else {
+          migrationsDir = path.join(projectRoot, "migrations");
+        }
+
         ensureDir(migrationsDir);
 
         const timestamp = Date.now();

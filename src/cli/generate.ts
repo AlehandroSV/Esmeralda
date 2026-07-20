@@ -11,6 +11,7 @@ import { writeFile, ensureDir } from "../core/file-manager.js";
 interface GenerateOptions {
   name?: string;
   preview?: boolean;
+  database?: string;
 }
 
 export function registerGenerate(program: Command): void {
@@ -19,6 +20,7 @@ export function registerGenerate(program: Command): void {
     .description("Generate migration from schema diff")
     .option("-n, --name <name>", "Migration name")
     .option("--preview", "Preview SQL without generating file")
+    .option("-d, --database <name>", "Database to generate for")
     .action(async (options: GenerateOptions) => {
       const projectRoot = findProjectRoot();
       if (!projectRoot) {

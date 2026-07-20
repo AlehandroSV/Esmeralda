@@ -13,7 +13,8 @@ export function registerDbPull(db: Command): void {
     .command("pull")
     .description("Introspect database and generate entity files")
     .option("-t, --table <name>", "Introspect specific table only")
-    .action(async (options: { table?: string }) => {
+    .option("-d, --database <name>", "Database to introspect")
+    .action(async (options: { table?: string; database?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         if (!projectRoot) {

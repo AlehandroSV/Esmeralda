@@ -10,6 +10,7 @@ const exec = promisify(execFile);
 
 interface RollbackOptions {
   steps?: string;
+  database?: string;
 }
 
 export function registerMigrateRollback(migrate: Command): void {
@@ -17,6 +18,7 @@ export function registerMigrateRollback(migrate: Command): void {
     .command("rollback")
     .description("Rollback last migration(s)")
     .option("-s, --steps <number>", "Number of migrations to rollback", "1")
+    .option("-d, --database <name>", "Database to rollback")
     .action(async (options: RollbackOptions) => {
       try {
         const projectRoot = findProjectRoot();
@@ -24,7 +26,19 @@ export function registerMigrateRollback(migrate: Command): void {
           throw AppError.notInitialized();
         }
 
-        const migrationsDir = path.join(projectRoot, "migrations");
+        // Get migrations directory based on database option
+        let migrationsDir: string;
+        if (options.database) {
+          const { getDatabaseConfig } = await import("../core/multi-db.js");
+          const dbConfig = getDatabaseConfig(projectRoot, options.database);
+          if (!dbConfig) {
+            throw new Error(`Database "${options.database}" not found in config.`);
+          }
+          migrationsDir = dbConfig.migrationsDir;
+        } else {
+          migrationsDir = path.join(projectRoot, "migrations");
+        }
+
         if (!fs.existsSync(migrationsDir)) {
           throw AppError.migrationsDirNotFound();
         }

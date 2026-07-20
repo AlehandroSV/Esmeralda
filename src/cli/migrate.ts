@@ -10,6 +10,7 @@ const exec = promisify(execFile);
 
 interface MigrateOptions {
   preview?: boolean;
+  database?: string;
 }
 
 function hasDockerCompose(projectRoot: string): boolean {
@@ -49,6 +50,7 @@ export function registerMigrate(program: Command): Command {
   const migrate = program
     .command("migrate")
     .description("Run pending migrations")
+    .option("-d, --database <name>", "Database to migrate (for multi-database)")
     .option("--preview", "Show SQL without executing")
     .action(async (options: MigrateOptions) => {
       try {
@@ -57,7 +59,19 @@ export function registerMigrate(program: Command): Command {
           throw AppError.notInitialized();
         }
 
-        const migrationsDir = path.join(projectRoot, "migrations");
+        // Get migrations directory based on database option
+        let migrationsDir: string;
+        if (options.database) {
+          const { getDatabaseConfig } = await import("../core/multi-db.js");
+          const dbConfig = getDatabaseConfig(projectRoot, options.database);
+          if (!dbConfig) {
+            throw new Error(`Database "${options.database}" not found in config.`);
+          }
+          migrationsDir = dbConfig.migrationsDir;
+        } else {
+          migrationsDir = path.join(projectRoot, "migrations");
+        }
+
         if (!fs.existsSync(migrationsDir)) {
           throw AppError.migrationsDirNotFound();
         }
