@@ -30,9 +30,9 @@ registerMigrateRollback(migrate);
 const db = program.command("db").description("Database operations");
 registerDbPull(db);
 registerDbPush(db);
+registerSchemaDiff(db);
 registerSeed(program);
 registerSchemaGenerate(program);
-registerSchemaDiff(program);
 
 if (process.argv.includes("-help")) {
   program.help();
