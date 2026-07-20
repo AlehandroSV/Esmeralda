@@ -13,7 +13,7 @@
 
 ### About
 
-Esmeralda is the official CLI for Jade ORM. It manages projects, migrations, schemas, and seeds in a simple and intuitive way.
+Esmeralda is the official CLI for Jade ORM. It manages projects, migrations, schemas, seeds, and database operations in a simple and intuitive way.
 
 ### Installation
 
@@ -25,10 +25,12 @@ npm install -g @alehandrosv/esmeralda-cli
 
 #### init
 
-Creates the basic structure of a Jade project.
+Creates the basic structure of a Jade project. Supports interactive mode and `--yes` flag.
 
 ```bash
-esmeralda init -n my-app
+esmeralda init -n my-app          # Non-interactive
+esmeralda init                     # Interactive (asks for config)
+esmeralda init --yes               # Use defaults for everything
 ```
 
 Generates:
@@ -123,14 +125,34 @@ This will:
 - Create tables with `CREATE TABLE IF NOT EXISTS`
 - Add foreign key constraints
 
-#### seed
+#### db diff
 
-Runs seed files.
+Compares schema definitions with the current database state.
 
 ```bash
-esmeralda seed                   # All seeds
-esmeralda seed user              # Specific seed
+esmeralda db diff
 ```
+
+Shows differences between your schema files and the live database.
+
+#### db seed
+
+Runs seed files from the seeds directory.
+
+```bash
+esmeralda db seed                   # All seeds
+esmeralda db seed user              # Specific seed
+```
+
+#### schema-generate
+
+Generates Lua entity files from declarative schema definitions.
+
+```bash
+esmeralda schema-generate
+```
+
+Reads declarative schema files and outputs `Jade.Entity()` Lua format.
 
 ### Error Handling
 
@@ -158,7 +180,7 @@ Esmeralda automatically detects `docker-compose.yml` and runs commands inside th
 ```bash
 # With docker-compose.yml in project root
 esmeralda migrate        # Runs inside container
-esmeralda seed           # Runs inside container
+esmeralda db seed        # Runs inside container
 
 # Without docker-compose.yml
 esmeralda migrate        # Runs locally (requires Lua/LuaJIT)
@@ -174,7 +196,7 @@ MIT
 
 ### Sobre
 
-Esmeralda e a CLI oficial do Jade ORM. Gerencia projetos, migrations, schemas e seeds de forma simples e intuitiva.
+Esmeralda e a CLI oficial do Jade ORM. Gerencia projetos, migrations, schemas, seeds e operacoes de banco de forma simples e intuitiva.
 
 ### Instalacao
 
@@ -186,10 +208,12 @@ npm install -g @alehandrosv/esmeralda-cli
 
 #### init
 
-Cria a estrutura basica de um projeto Jade.
+Cria a estrutura basica de um projeto Jade. Suporta modo interativo e flag `--yes`.
 
 ```bash
-esmeralda init -n my-app
+esmeralda init -n my-app          # Nao-interativo
+esmeralda init                     # Interativo (pergunta a config)
+esmeralda init --yes               # Usar padroes para tudo
 ```
 
 Gera:
@@ -284,14 +308,34 @@ Isso ira:
 - Criar tabelas com `CREATE TABLE IF NOT EXISTS`
 - Adicionar constraints de foreign key
 
-#### seed
+#### db diff
 
-Roda arquivos de seed.
+Compara definicoes de schema com o estado atual do banco.
 
 ```bash
-esmeralda seed                   # Todos os seeds
-esmeralda seed user              # Seed especifico
+esmeralda db diff
 ```
+
+Mostra diferencas entre seus arquivos de schema e o banco ao vivo.
+
+#### db seed
+
+Roda arquivos de seed do diretorio seeds.
+
+```bash
+esmeralda db seed                   # Todos os seeds
+esmeralda db seed user              # Seed especifico
+```
+
+#### schema-generate
+
+Gera arquivos Lua de entidade a partir de definicoes de schema declarativo.
+
+```bash
+esmeralda schema-generate
+```
+
+Le arquivos de schema declarativo e saida no formato `Jade.Entity()` Lua.
 
 ### Tratamento de Erros
 
@@ -300,11 +344,6 @@ Todos os comandos fornecem mensagens de erro claras com sugestoes:
 ```
 [error] Not a Jade project. Run 'esmeralda init' first.
 [info] Suggestion: Run 'esmeralda init' in your project directory
-```
-
-```
-[error] Failed to apply migration: 20260716_create_users.lua
-[info] Check the migration file for syntax errors. Original error: attempt to call nil value
 ```
 
 Ative o modo debug para stack traces:
@@ -319,7 +358,7 @@ O Esmeralda detecta automaticamente o `docker-compose.yml` e roda os comandos de
 ```bash
 # Com docker-compose.yml na raiz do projeto
 esmeralda migrate        # Roda dentro do container
-esmeralda seed           # Roda dentro do container
+esmeralda db seed        # Roda dentro do container
 
 # Sem docker-compose.yml
 esmeralda migrate        # Roda localmente (requer Lua/LuaJIT)
