@@ -1,6 +1,6 @@
 {
   "name": "@alehandrosv/esmeralda-cli",
-  "version": "0.1.12",
+  "version": "0.0.0",
   "description": "CLI for Jade ORM - a modern ORM for Lua",
   "main": "dist/index.js",
   "bin": {
@@ -37,11 +37,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/AlehandroSV/esmeralda.git",
-    "directory": "esmerald"
+    "directory": "esmeralda"
   },
   "homepage": "https://github.com/AlehandroSV/jade",
   "bugs": {
-    "url": "https://github.com/AlehandroSV/Esmeralda/issues"
+    "url": "https://github.com/AlehandroSV/esmeralda/issues"
   },
   "license": "MIT",
   "dependencies": {

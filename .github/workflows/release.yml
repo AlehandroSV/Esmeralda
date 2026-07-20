@@ -25,6 +25,12 @@ jobs:
 
       - run: npm run build
 
+      - name: Inject version from tag
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          npm version "$VERSION" --no-git-tag-version
+          echo "Version set to ${VERSION}"
+
       - name: Publish to npmjs.com
         run: npm publish
         env:
