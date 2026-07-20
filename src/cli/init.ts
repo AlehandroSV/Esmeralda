@@ -7,7 +7,7 @@ interface InitOptions {
   name?: string;
 }
 
-function initInDirectory(targetPath: string, projectName: string): void {
+export function initInDirectory(targetPath: string, projectName: string): void {
   Logger.info(`Initializing Jade in: ${targetPath}`);
 
   // Create directories
@@ -82,11 +82,6 @@ export function registerInit(program: Command): void {
           // Mode 2: Initialize Jade in the current directory
           const cwd = process.cwd();
           const dirName = path.basename(cwd);
-
-          if (fileExists(path.join(cwd, "jade.config.lua"))) {
-            Logger.warn("Jade is already initialized in this directory.");
-            return;
-          }
 
           initInDirectory(cwd, dirName);
 
