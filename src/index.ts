@@ -31,7 +31,7 @@ const db = program.command("db").description("Database operations");
 registerDbPull(db);
 registerDbPush(db);
 registerSchemaDiff(db);
-registerSeed(program);
+registerSeed(db);
 registerSchemaGenerate(program);
 
 if (process.argv.includes("-help")) {

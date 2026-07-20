@@ -34,8 +34,8 @@ async function runLocal(script: string): Promise<void> {
   }
 }
 
-export function registerSeed(program: Command): void {
-  program
+export function registerSeed(db: Command): void {
+  db
     .command("seed")
     .description("Run seed files")
     .argument("[name]", "Seed file name (without extension)")
