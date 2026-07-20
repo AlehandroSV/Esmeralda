@@ -39,14 +39,27 @@ export function registerSeed(db: Command): void {
     .command("seed")
     .description("Run seed files")
     .argument("[name]", "Seed file name (without extension)")
-    .action(async (name?: string) => {
+    .option("-d, --database <name>", "Database to seed")
+    .action(async (name?: string, options?: { database?: string }) => {
       try {
         const projectRoot = findProjectRoot();
         if (!projectRoot) {
           throw AppError.notInitialized();
         }
 
-        const seedsDir = path.join(projectRoot, "seeds");
+        // Get seeds directory based on database option
+        let seedsDir: string;
+        if (options?.database) {
+          const { getDatabaseConfig } = await import("../core/multi-db.js");
+          const dbConfig = getDatabaseConfig(projectRoot, options.database);
+          if (!dbConfig) {
+            throw new Error(`Database "${options.database}" not found in config.`);
+          }
+          seedsDir = dbConfig.seedsDir;
+        } else {
+          seedsDir = path.join(projectRoot, "seeds");
+        }
+
         if (!fs.existsSync(seedsDir)) {
           throw AppError.seedsDirNotFound();
         }

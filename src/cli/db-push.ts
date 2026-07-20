@@ -11,6 +11,7 @@ const exec = promisify(execFile);
 
 interface DbPushOptions {
   force?: boolean;
+  database?: string;
 }
 
 export function registerDbPush(db: Command): void {
@@ -18,6 +19,7 @@ export function registerDbPush(db: Command): void {
     .command("push")
     .description("Push schema directly to database (skip migrations)")
     .option("--force", "Skip confirmation")
+    .option("-d, --database <name>", "Database to push to")
     .action(async (options: DbPushOptions) => {
       try {
         const projectRoot = findProjectRoot();
