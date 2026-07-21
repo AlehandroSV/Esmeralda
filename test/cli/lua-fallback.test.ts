@@ -1,28 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
-// We test the fallback logic by importing the module and mocking execFile
-// The key function is runInDocker which tries luajit -> lua5.4 -> lua5.3 -> lua5.1 -> lua
-
-describe("Lua binary fallback in Docker", () => {
-  it("seed.ts: runInDocker tries lua5.4 when luajit not available", async () => {
+describe("Lua binary detection in Docker", () => {
+  it("seed.ts: detects lua binary via 'which' before executing", () => {
     const seedSource = fs.readFileSync(
       path.join(__dirname, "../../src/cli/seed.ts"),
       "utf-8"
     );
+    // Uses which to detect available binary
+    expect(seedSource).toContain('which ${bin}');
+    // Has fallback chain
     expect(seedSource).toContain('const luaBins = ["luajit", "lua5.4", "lua5.3", "lua5.1", "lua"]');
-    expect(seedSource).toContain('msg.includes("executable file not found")');
-    expect(seedSource).toContain("No Lua interpreter found in Docker container");
   });
 
-  it("migrate.ts: runInDocker tries lua5.4 when luajit not available", () => {
+  it("migrate.ts: detects lua binary via 'which' before executing", () => {
     const migrateSource = fs.readFileSync(
       path.join(__dirname, "../../src/cli/migrate.ts"),
       "utf-8"
     );
+    expect(migrateSource).toContain('which ${bin}');
     expect(migrateSource).toContain('const luaBins = ["luajit", "lua5.4", "lua5.3", "lua5.1", "lua"]');
-    expect(migrateSource).toContain('msg.includes("executable file not found")');
   });
 
   it("seed.ts: local fallback tries luajit then lua", () => {
@@ -30,7 +28,6 @@ describe("Lua binary fallback in Docker", () => {
       path.join(__dirname, "../../src/cli/seed.ts"),
       "utf-8"
     );
-    // Local execution should still try luajit first, then lua
     expect(seedSource).toContain('await exec("luajit"');
     expect(seedSource).toContain('await exec("lua"');
   });
@@ -49,7 +46,6 @@ describe("Lua binary fallback in Docker", () => {
       path.join(__dirname, "../../src/cli/seed.ts"),
       "utf-8"
     );
-    // Docker exec must use -T for non-interactive
     expect(seedSource).toContain('"compose", "exec", "-T"');
   });
 
@@ -66,7 +62,6 @@ describe("Lua binary fallback in Docker", () => {
       path.join(__dirname, "../../src/cli/seed.ts"),
       "utf-8"
     );
-    // Should extract service name from compose file
     expect(seedSource).toContain('composeContent.match');
     expect(seedSource).toContain('serviceName = serviceMatch');
   });
