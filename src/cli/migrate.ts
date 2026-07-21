@@ -28,10 +28,19 @@ async function runInDocker(script: string, projectRoot: string): Promise<{ stdou
   const serviceMatch = composeContent.match(/^\s{2}(\w+):/m);
   const serviceName = serviceMatch ? serviceMatch[1] : "api";
 
-  return await exec("docker", [
-    "compose", "exec", "-T", serviceName,
-    "luajit", "-e", script
-  ], { cwd: projectRoot });
+  const luaBins = ["luajit", "lua5.4", "lua5.3", "lua5.1", "lua"];
+  for (const bin of luaBins) {
+    try {
+      return await exec("docker", [
+        "compose", "exec", "-T", serviceName,
+        bin, "-e", script
+      ], { cwd: projectRoot });
+    } catch (err: any) {
+      if (err.message?.includes("executable file not found")) continue;
+      throw err;
+    }
+  }
+  throw new Error("No Lua interpreter found in Docker container");
 }
 
 /** Escape a string for safe embedding in a Lua string literal */

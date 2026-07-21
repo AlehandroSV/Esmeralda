@@ -20,10 +20,20 @@ async function runInDocker(script: string, projectRoot: string): Promise<void> {
   const serviceMatch = composeContent.match(/^\s{2}(\w+):/m);
   const serviceName = serviceMatch ? serviceMatch[1] : "api";
 
-  await exec("docker", [
-    "compose", "exec", "-T", serviceName,
-    "luajit", "-e", script
-  ], { cwd: projectRoot });
+  const luaBins = ["luajit", "lua5.4", "lua5.3", "lua5.1", "lua"];
+  for (const bin of luaBins) {
+    try {
+      await exec("docker", [
+        "compose", "exec", "-T", serviceName,
+        bin, "-e", script
+      ], { cwd: projectRoot });
+      return;
+    } catch (err: any) {
+      if (err.message?.includes("executable file not found")) continue;
+      throw err;
+    }
+  }
+  throw new Error("No Lua interpreter found in Docker container (tried: " + luaBins.join(", ") + ")");
 }
 
 async function runLocal(script: string): Promise<void> {
