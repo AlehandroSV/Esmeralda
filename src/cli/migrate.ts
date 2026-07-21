@@ -28,13 +28,20 @@ async function runInDocker(script: string, projectRoot: string): Promise<{ stdou
   const serviceMatch = composeContent.match(/^\s{2}(\w+):/m);
   const serviceName = serviceMatch ? serviceMatch[1] : "api";
 
-  // Escape the script for shell
-  const escapedScript = script.replace(/"/g, '\\"').replace(/\n/g, " ");
-
   return await exec("docker", [
     "compose", "exec", "-T", serviceName,
     "luajit", "-e", script
   ], { cwd: projectRoot });
+}
+
+/** Escape a string for safe embedding in a Lua string literal */
+function escapeLuaString(str: string): string {
+  return str
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r");
 }
 
 async function runLocal(script: string): Promise<void> {
@@ -118,16 +125,21 @@ export function registerMigrate(program: Command): Command {
               migrationPath = path.join(migrationsDir, file).replace(/\\/g, "\\\\");
             }
 
+            // Escape paths for safe embedding in Lua strings
+            const safeConfigPath = escapeLuaString(configPath);
+            const safeMigrationPath = escapeLuaString(migrationPath);
+            const safeFileName = escapeLuaString(file);
+
             const script = `
 local jade = require("jade")
-local config = dofile("${configPath}")
+local config = dofile("${safeConfigPath}")
 jade.configure(config)
 jade.migration.init(jade.driver())
-local migration = dofile("${migrationPath}")
+local migration = dofile("${safeMigrationPath}")
 migration.up()
 local tracker = require("jade.migration.tracker")
-tracker.recordMigration(jade.driver(), "${file}")
-print("  OK: ${file}")
+tracker.recordMigration(jade.driver(), "${safeFileName}")
+print("  OK: ${safeFileName}")
             `;
 
             if (useDocker) {
@@ -192,9 +204,11 @@ print("  OK: ${file}")
           configPath = path.join(projectRoot, "jade.config.lua").replace(/\\/g, "\\\\");
         }
 
+        const safeConfigPath = escapeLuaString(configPath);
+
         const script = `
 local jade = require("jade")
-local config = dofile("${configPath}")
+local config = dofile("${safeConfigPath}")
 jade.configure(config)
 jade.migration.init(jade.driver())
 local tracker = require("jade.migration.tracker")

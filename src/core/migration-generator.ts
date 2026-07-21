@@ -1,5 +1,10 @@
 import { EntityDef, ColumnDef } from "./schema-parser.js";
 
+/** Escape a string for safe embedding in a SQL identifier (double-quote quoting) */
+function quoteIdentifier(name: string): string {
+  return '"' + name.replace(/"/g, '""') + '"';
+}
+
 export function generateMigration(entities: EntityDef[], direction: "up" | "down"): string {
   const lines: string[] = [];
 
@@ -10,7 +15,7 @@ export function generateMigration(entities: EntityDef[], direction: "up" | "down
   } else {
     // Down migration drops tables in reverse order
     for (const entity of [...entities].reverse()) {
-      lines.push(`    jade.driver():execute("DROP TABLE IF EXISTS ${entity.tableName} CASCADE")`);
+      lines.push(`    jade.driver():execute("DROP TABLE IF EXISTS ${quoteIdentifier(entity.tableName)} CASCADE")`);
     }
   }
 
@@ -25,9 +30,9 @@ function generateCreateTable(entity: EntityDef): string {
 
     // Integer primary keys become SERIAL (auto-increment)
     if (col.primaryKey && (col.type === "INTEGER" || col.type === "BIGINT")) {
-      def = `        ${col.name} SERIAL PRIMARY KEY`;
+      def = `        ${quoteIdentifier(col.name)} SERIAL PRIMARY KEY`;
     } else {
-      def = `        ${col.name} ${getSQLType(col)}`;
+      def = `        ${quoteIdentifier(col.name)} ${getSQLType(col)}`;
       if (col.primaryKey) def += " PRIMARY KEY";
       if (col.notNull && !col.primaryKey) def += " NOT NULL";
       if (col.unique) def += " UNIQUE";
@@ -39,7 +44,7 @@ function generateCreateTable(entity: EntityDef): string {
     colDefs.push(def);
   }
 
-  const sql = `CREATE TABLE IF NOT EXISTS ${entity.tableName} (\n${colDefs.join(",\n")}\n)`;
+  const sql = `CREATE TABLE IF NOT EXISTS ${quoteIdentifier(entity.tableName)} (\n${colDefs.join(",\n")}\n)`;
   return `    jade.driver():execute([[\n${sql}\n    ]])`;
 }
 

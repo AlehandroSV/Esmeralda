@@ -76,15 +76,25 @@ export function promptUser(projectName: string): Promise<DatabaseConfig> {
   });
 }
 
+/** Escape a string for safe embedding in a Lua string literal */
+function escapeLuaString(str: string): string {
+  return str
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r");
+}
+
 export function generateConfigContent(projectName: string, config: DatabaseConfig): string {
   return `return {
     database = {
-        driver = "${config.driver}",
-        host = "${config.host}",
-        port = ${config.port},
-        database = "${config.database}",
-        user = "${config.user}",
-        password = "${config.password}"
+        driver = "${escapeLuaString(config.driver)}",
+        host = "${escapeLuaString(config.host)}",
+        port = ${parseInt(String(config.port), 10) || 5432},
+        database = "${escapeLuaString(config.database)}",
+        user = "${escapeLuaString(config.user)}",
+        password = "${escapeLuaString(config.password)}"
     }
 }
 `;
