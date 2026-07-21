@@ -7,13 +7,12 @@ import * as path from "path";
 
 describe("Lua binary fallback in Docker", () => {
   it("seed.ts: runInDocker tries lua5.4 when luajit not available", async () => {
-    // Read the source to verify the fallback chain exists
     const seedSource = fs.readFileSync(
       path.join(__dirname, "../../src/cli/seed.ts"),
       "utf-8"
     );
     expect(seedSource).toContain('const luaBins = ["luajit", "lua5.4", "lua5.3", "lua5.1", "lua"]');
-    expect(seedSource).toContain('if (err.message?.includes("executable file not found")) continue');
+    expect(seedSource).toContain('msg.includes("executable file not found")');
     expect(seedSource).toContain("No Lua interpreter found in Docker container");
   });
 
@@ -23,7 +22,7 @@ describe("Lua binary fallback in Docker", () => {
       "utf-8"
     );
     expect(migrateSource).toContain('const luaBins = ["luajit", "lua5.4", "lua5.3", "lua5.1", "lua"]');
-    expect(migrateSource).toContain('if (err.message?.includes("executable file not found")) continue');
+    expect(migrateSource).toContain('msg.includes("executable file not found")');
   });
 
   it("seed.ts: local fallback tries luajit then lua", () => {

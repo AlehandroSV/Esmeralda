@@ -36,7 +36,8 @@ async function runInDocker(script: string, projectRoot: string): Promise<{ stdou
         bin, "-e", script
       ], { cwd: projectRoot });
     } catch (err: any) {
-      if (err.message?.includes("executable file not found")) continue;
+      const msg = err.message || err.stderr || err.stdout || "";
+      if (msg.includes("executable file not found") || msg.includes("not found")) continue;
       throw err;
     }
   }
