@@ -20,21 +20,27 @@ async function runInDocker(script: string, projectRoot: string): Promise<void> {
   const serviceMatch = composeContent.match(/^\s{2}(\w+):/m);
   const serviceName = serviceMatch ? serviceMatch[1] : "api";
 
+  // Detect which Lua binary is available in the container
   const luaBins = ["luajit", "lua5.4", "lua5.3", "lua5.1", "lua"];
+  let luaBin = luaBins[0]; // default to luajit
+
   for (const bin of luaBins) {
     try {
       await exec("docker", [
         "compose", "exec", "-T", serviceName,
-        bin, "-e", script
+        "sh", "-c", `which ${bin} 2>/dev/null`
       ], { cwd: projectRoot });
-      return;
-    } catch (err: any) {
-      const msg = (err.message || "") + " " + (err.stderr || "") + " " + (err.stdout || "");
-      if (msg.includes("executable file not found") || msg.includes("not found") || msg.includes("ENOENT")) continue;
-      throw err;
+      luaBin = bin;
+      break;
+    } catch {
+      continue;
     }
   }
-  throw new Error("No Lua interpreter found in Docker container (tried: " + luaBins.join(", ") + ")");
+
+  await exec("docker", [
+    "compose", "exec", "-T", serviceName,
+    luaBin, "-e", script
+  ], { cwd: projectRoot });
 }
 
 async function runLocal(script: string): Promise<void> {
