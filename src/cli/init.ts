@@ -3,6 +3,7 @@ import * as path from "path";
 import * as readline from "readline";
 import { Logger } from "../utils/logger.js";
 import { ensureDir, writeFile, fileExists } from "../core/file-manager.js";
+import { createEmptyState } from "../core/schema-state.js";
 
 interface InitOptions {
   name?: string;
@@ -136,6 +137,13 @@ return {}
     Logger.info("  Created schema/init.lua");
   } else {
     Logger.info("  schema/init.lua already exists, skipping");
+  }
+
+  // Create .esmeralda-state.json if it doesn't exist
+  const statePath = path.join(targetPath, ".esmeralda-state.json");
+  if (!fileExists(statePath)) {
+    writeFile(statePath, JSON.stringify(createEmptyState(), null, 2) + "\n");
+    Logger.info("  Created .esmeralda-state.json");
   }
 }
 

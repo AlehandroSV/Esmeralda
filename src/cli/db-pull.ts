@@ -3,6 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { Logger, AppError } from "../utils/logger.js";
 import { findProjectRoot } from "../core/project.js";
+import { parseSchemaFile } from "../core/schema-parser.js";
+import { saveState } from "../core/schema-state.js";
 import { execFile } from "child_process";
 import { promisify } from "util";
 
@@ -101,6 +103,22 @@ export function registerDbPull(db: Command): void {
           const filename = `${tableName}.lua`;
           const filePath = path.join(schemaDir, filename);
           fs.writeFileSync(filePath, luaContent, "utf-8");
+        }
+
+        // Save schema state as baseline for future generate commands
+        const generatedFiles = tables
+          .filter((t: string) => !options.table || t === options.table)
+          .map((t: string) => `${t}.lua`);
+
+        const entities = [];
+        for (const file of generatedFiles) {
+          const content = fs.readFileSync(path.join(schemaDir, file), "utf-8");
+          entities.push(...parseSchemaFile(content));
+        }
+
+        if (entities.length > 0) {
+          saveState(projectRoot, entities);
+          Logger.info(`  Saved schema state (.esmeralda-state.json) with ${entities.length} entities`);
         }
 
         Logger.success("Entity files generated in schema/");
